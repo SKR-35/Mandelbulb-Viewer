@@ -55,3 +55,23 @@ are one-way paths, not seamless loops. Surface clearance is approximate.
 ### Julia Bulb
 
 Select **Julia Bulb** in the fractal selector and adjust Cx, Cy and Cz in the toolbar. The fixed three-dimensional constant replaces the spatially varying Mandelbulb constant. Export supports Julia Bulb Morph (fixed camera) and Julia Bulb Orbit (moving camera). Both follow periodic parameter paths. Distance estimation is approximate; some parameter combinations may produce disconnected or poorly resolved surfaces.
+
+## Batch gallery generation
+
+Generate all 18 preset images without opening the GUI:
+
+```powershell
+uv run python -m mandelbulb_viewer.gallery --output gallery --width 1200 --height 1200
+```
+
+Use `--dry-run` to preview filenames, `--preset "Classic Rainbow"` to select a
+scene (repeatable), `--samples 2` for supersampling, and `--threads 4` to set
+Numba threads. Existing files are skipped unless `--overwrite` is supplied.
+
+```powershell
+uv run python -m mandelbulb_viewer.gallery --fractal julia --cx 0.35 --cy 0.2 --cz 0.1 --output gallery/julia
+uv run python -m mandelbulb_viewer.gallery --preset "Classic Rainbow" --format mp4 --animation "Julia Bulb Morph" --width 480 --height 480 --output gallery/videos
+```
+
+Animation exports require the same dependencies as GUI exports. Interrupting a
+batch preserves previously completed files; rerun to skip existing outputs.
