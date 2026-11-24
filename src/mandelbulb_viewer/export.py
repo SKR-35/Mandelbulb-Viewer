@@ -12,6 +12,8 @@ from PIL import Image
 from mandelbulb_viewer.camera_paths import CAMERA_MODES, camera_path
 from mandelbulb_viewer.progressive import render_pass
 
+JULIA_MODES = ("Julia Bulb Morph", "Julia Bulb Orbit")
+
 
 class ExportCancelled(Exception):
     """Export was cancelled before publication."""
@@ -31,6 +33,11 @@ def suggested_filename(settings, stage, suffix, mode, fps, seconds):
         slug(settings.get("color_mode", "radial")),
         f"{stage.width}x{stage.height}",
     ]
+    if settings.get("fractal") == "Julia Bulb" or mode in JULIA_MODES:
+        parts[0] = "julia-bulb"
+        parts.extend(
+            f"{k}{settings.get(k, v):.3g}" for k, v in (("cx", 0.35), ("cy", 0.2), ("cz", 0.1))
+        )
     suffix = suffix.lower().lstrip(".")
     if suffix != "png":
         parts.extend((slug(mode), f"{fps}fps", f"{seconds}s"))
@@ -44,7 +51,15 @@ def frame_scene(camera, settings, mode, phase):
         return camera_path(camera, settings, mode, phase)
     settings = dict(settings)
     wave = (1 - math.cos(2 * math.pi * phase)) / 2
-    if mode == "Camera Orbit":
+    if mode in JULIA_MODES:
+        settings["fractal"] = "Julia Bulb"
+        angle = 2 * math.pi * phase
+        settings["cx"] = settings.get("cx", 0.35) + 0.15 * (math.cos(angle) - 1)
+        settings["cy"] = settings.get("cy", 0.2) + 0.15 * math.sin(angle)
+        settings["cz"] = settings.get("cz", 0.1) + 0.10 * math.sin(2 * angle)
+        if mode == "Julia Bulb Orbit":
+            camera, _ = frame_scene(camera, settings, "Camera Orbit", phase)
+    elif mode == "Camera Orbit":
         x, y, z = (a - b for a, b in zip(camera.position, camera.target, strict=True))
         angle = 2 * math.pi * phase
         offset = (

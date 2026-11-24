@@ -7,7 +7,7 @@ from time import monotonic
 from tkinter import filedialog, messagebox, ttk
 
 from mandelbulb_viewer.camera_paths import CAMERA_MODES
-from mandelbulb_viewer.export import ExportCancelled, export_scene, suggested_filename
+from mandelbulb_viewer.export import JULIA_MODES, ExportCancelled, export_scene, suggested_filename
 from mandelbulb_viewer.progressive import RenderPass
 
 
@@ -22,7 +22,7 @@ def open_export(viewer):
         (
             "Animation",
             "Camera Orbit",
-            ("Camera Orbit", "Power Morph", "Palette Cycle", "Zoom", *CAMERA_MODES),
+            ("Camera Orbit", "Power Morph", "Palette Cycle", "Zoom", *CAMERA_MODES, *JULIA_MODES),
         ),
         ("Width", "640", None),
         ("Height", "480", None),

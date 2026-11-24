@@ -18,11 +18,11 @@ class Geometry:
 
 
 @njit(cache=True)
-def _march(origin, direction, power, iterations, bailout, epsilon, max_steps, far):
+def _march(origin, direction, power, iterations, bailout, epsilon, max_steps, far, julia=None):
     distance = 0.0
     for step in range(1, max_steps + 1):
         x, y, z = origin + distance * direction
-        value, _, _ = _estimate(x, y, z, power, iterations, bailout)
+        value, _, _ = _estimate(x, y, z, power, iterations, bailout, julia)
         if value <= epsilon:
             return distance, True, step
         # The estimator is approximate; a conservative step reduces overshoot.
@@ -47,6 +47,7 @@ def _render(
     epsilon,
     max_steps,
     far,
+    julia=None,
 ):
     depth = np.empty((height, width), dtype=np.float64)
     hit = np.empty((height, width), dtype=np.bool_)
@@ -58,7 +59,7 @@ def _render(
             direction = forward + u * right + v * up
             direction /= np.sqrt(np.dot(direction, direction))
             depth[y, x], hit[y, x], steps[y, x] = _march(
-                origin, direction, power, iterations, bailout, epsilon, max_steps, far
+                origin, direction, power, iterations, bailout, epsilon, max_steps, far, julia
             )
     return depth, hit, steps
 
@@ -74,6 +75,7 @@ def render_geometry(
     epsilon: float = 0.001,
     max_steps: int = 256,
     far: float = 20.0,
+    julia=None,
 ) -> Geometry:
     """Render depth, hit mask and step count. Misses have infinite depth."""
     if any(type(v) is not int or not 1 <= v <= 4096 for v in (width, height)):
@@ -84,7 +86,7 @@ def render_geometry(
         raise ValueError("Epsilon must be positive and at most 0.1")
     if not math.isfinite(far) or not 0 < far <= 1e5:
         raise ValueError("Far distance must be positive and at most 1e5")
-    estimate(0.0, 0.0, 0.0, power, iterations, bailout)
+    estimate(0.0, 0.0, 0.0, power, iterations, bailout, julia)
     if camera is None:
         camera = Camera()
     frame = camera.frame()
@@ -100,5 +102,6 @@ def render_geometry(
             epsilon,
             max_steps,
             far,
+            julia,
         )
     )

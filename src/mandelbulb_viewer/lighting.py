@@ -13,18 +13,18 @@ from mandelbulb_viewer.render import render_geometry
 
 
 @njit(cache=True)
-def _distance(p, power, iterations, bailout):
-    return _estimate(p[0], p[1], p[2], power, iterations, bailout)[0]
+def _distance(p, power, iterations, bailout, julia=None):
+    return _estimate(p[0], p[1], p[2], power, iterations, bailout, julia)[0]
 
 
 @njit(cache=True)
-def _normal(p, direction, delta, power, iterations, bailout):
+def _normal(p, direction, delta, power, iterations, bailout, julia=None):
     gradient = np.empty(3)
     for axis in range(3):
         offset = np.zeros(3)
         offset[axis] = delta
-        gradient[axis] = _distance(p + offset, power, iterations, bailout) - _distance(
-            p - offset, power, iterations, bailout
+        gradient[axis] = _distance(p + offset, power, iterations, bailout, julia) - _distance(
+            p - offset, power, iterations, bailout, julia
         )
     length = np.sqrt(np.dot(gradient, gradient))
     if length < 1e-15:
@@ -33,32 +33,36 @@ def _normal(p, direction, delta, power, iterations, bailout):
 
 
 @njit(cache=True)
-def _occlusion(p, normal, epsilon, power, iterations, bailout):
+def _occlusion(p, normal, epsilon, power, iterations, bailout, julia=None):
     deficit = 0.0
     for i in range(1, 6):
         distance = max(4 * epsilon, 0.015) * i
-        actual = _distance(p + normal * distance, power, iterations, bailout)
+        actual = _distance(p + normal * distance, power, iterations, bailout, julia)
         deficit += max(0.0, 1.0 - actual / distance) * 0.5**i
     return max(0.25, 1.0 - 0.8 * deficit)
 
 
 @njit(cache=True)
-def _orbit_trap(p, power, iterations, bailout):
+def _orbit_trap(p, power, iterations, bailout, julia=None):
     # Minimum distance of the orbit to the origin (a spherical trap).
     x, y, z = p
     zx, zy, zz = x, y, z
+    cx, cy, cz = (x, y, z) if julia is None else julia
     trap = math.sqrt(x * x + y * y + z * z)
     for i in range(iterations + 1):
         r = math.sqrt(zx * zx + zy * zy + zz * zz)
         trap = min(trap, r)
-        if r > bailout or r == 0.0 or i == iterations:
+        if r > bailout or i == iterations:
             break
+        if r == 0.0:
+            zx, zy, zz = cx, cy, cz
+            continue
         theta = math.acos(max(-1.0, min(1.0, zz / r))) * power
         phi = math.atan2(zy, zx) * power
         magnitude = r**power
-        zx = magnitude * math.sin(theta) * math.cos(phi) + x
-        zy = magnitude * math.sin(theta) * math.sin(phi) + y
-        zz = magnitude * math.cos(theta) + z
+        zx = magnitude * math.sin(theta) * math.cos(phi) + cx
+        zy = magnitude * math.sin(theta) * math.sin(phi) + cy
+        zz = magnitude * math.cos(theta) + cz
     return min(1.0, trap)
 
 
@@ -78,6 +82,7 @@ def _shade(
     mode,
     ambient,
     ao_strength,
+    julia=None,
 ):
     height, width = hit.shape
     field = np.zeros((height, width))
@@ -94,8 +99,8 @@ def _shade(
             direction = forward + u * right + v * up
             direction /= np.sqrt(np.dot(direction, direction))
             p = origin + depth[y, x] * direction
-            normal = _normal(p, direction, epsilon, power, iterations, bailout)
-            ao = _occlusion(p, normal, epsilon, power, iterations, bailout)
+            normal = _normal(p, direction, epsilon, power, iterations, bailout, julia)
+            ao = _occlusion(p, normal, epsilon, power, iterations, bailout, julia)
             diffuse = max(0.0, np.dot(normal, light))
             half = light - direction
             half /= np.sqrt(np.dot(half, half))
@@ -108,14 +113,16 @@ def _shade(
             elif mode == 2:
                 field[y, x] = (math.atan2(p[1], p[0]) + math.pi) / (2 * math.pi)
             elif mode == 3:
-                field[y, x] = _orbit_trap(p, power, iterations, bailout)
+                field[y, x] = _orbit_trap(p, power, iterations, bailout, julia)
             else:
                 field[y, x] = min(1.0, max(0.0, (np.sqrt(np.dot(p, p)) - 0.45) / 0.95))
     return field, illumination, highlights
 
 
 @lru_cache(maxsize=1)
-def _cached_geometry(camera, width, height, power, iterations, bailout, epsilon, max_steps, far):
+def _cached_geometry(
+    camera, width, height, power, iterations, bailout, epsilon, max_steps, far, julia=None
+):
     return render_geometry(
         camera,
         width,
@@ -126,6 +133,7 @@ def _cached_geometry(camera, width, height, power, iterations, bailout, epsilon,
         epsilon=epsilon,
         max_steps=max_steps,
         far=far,
+        julia=julia,
     )
 
 
@@ -143,9 +151,10 @@ def _cached_shading(
     mode,
     ambient,
     ao_strength,
+    julia=None,
 ):
     geometry = _cached_geometry(
-        camera, width, height, power, iterations, bailout, epsilon, max_steps, far
+        camera, width, height, power, iterations, bailout, epsilon, max_steps, far, julia
     )
     field, illumination, highlights = _shade(
         geometry.depth,
@@ -159,6 +168,7 @@ def _cached_shading(
         mode,
         ambient,
         ao_strength,
+        julia,
     )
     return geometry.hit, field, illumination, highlights
 
@@ -182,13 +192,20 @@ def render_image(
     ambient: float = 0.4,
     ao_strength: float = 0.65,
     exposure: float = 1.2,
+    fractal: str = "Mandelbulb",
+    cx: float = 0.35,
+    cy: float = 0.2,
+    cz: float = 0.1,
 ) -> np.ndarray:
     """Render an RGB uint8 image; gamma controls palette mapping."""
     if camera is None:
         camera = Camera()
+    if fractal not in ("Mandelbulb", "Julia Bulb"):
+        raise ValueError("Unknown fractal type")
+    julia = (cx, cy, cz) if fractal == "Julia Bulb" else None
     # Validate palette and gamma before expensive geometry work.
     colorize(np.zeros((1, 1)), palette, gamma)
-    estimate(0.0, 0.0, 0.0, power, iterations, bailout)
+    estimate(0.0, 0.0, 0.0, power, iterations, bailout, julia)
     modes = ("radial", "height", "angular", "orbit_trap")
     if color_mode not in modes:
         raise ValueError("Unknown color mode")
@@ -214,6 +231,7 @@ def render_image(
         modes.index(color_mode),
         ambient,
         ao_strength,
+        julia,
     )
     if color_cycles != 1 or color_offset != 0:
         field = (field * color_cycles + color_offset) % 1.0

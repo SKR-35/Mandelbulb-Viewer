@@ -51,3 +51,7 @@ Spiral Dive adds a lateral spiral. Fractal Flythrough is an experimental exterio
 approach with lateral steering; it does not guarantee traversal of arbitrary
 cavities. Aim the camera at the desired region before exporting. These modes
 are one-way paths, not seamless loops. Surface clearance is approximate.
+
+### Julia Bulb
+
+Select **Julia Bulb** in the fractal selector and adjust Cx, Cy and Cz in the toolbar. The fixed three-dimensional constant replaces the spatially varying Mandelbulb constant. Export supports Julia Bulb Morph (fixed camera) and Julia Bulb Orbit (moving camera). Both follow periodic parameter paths. Distance estimation is approximate; some parameter combinations may produce disconnected or poorly resolved surfaces.

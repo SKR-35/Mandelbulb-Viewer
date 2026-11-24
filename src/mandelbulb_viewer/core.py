@@ -10,27 +10,30 @@ DEFAULT_BAILOUT = 4.0
 
 
 @njit(cache=True)
-def _estimate(x, y, z, power, max_iterations, bailout):
+def _estimate(x, y, z, power, max_iterations, bailout, julia=None):
     # Starting at c skips the trivial first iteration from the origin.
     zx, zy, zz = x, y, z
     derivative = 1.0
+    cx, cy, cz = (x, y, z) if julia is None else julia
     for iteration in range(max_iterations + 1):
         radius = math.sqrt(zx * zx + zy * zy + zz * zz)
         if radius > bailout:
-            return 0.5 * radius * math.log(radius) / derivative, iteration, True
+            if derivative == 0.0:
+                return 0.0, iteration, True
+            return 0.5 * radius * math.log(radius) / max(derivative, 1e-300), iteration, True
         if iteration == max_iterations:
             break
         if radius == 0.0:
-            zx, zy, zz = x, y, z
-            derivative = 1.0
+            zx, zy, zz = cx, cy, cz
+            derivative = 1.0 if julia is None else 0.0
             continue
         theta = math.acos(max(-1.0, min(1.0, zz / radius))) * power
         phi = math.atan2(zy, zx) * power
-        derivative = power * radius ** (power - 1.0) * derivative + 1.0
+        derivative = power * radius ** (power - 1.0) * derivative + (1.0 if julia is None else 0.0)
         magnitude = radius**power
-        zx = magnitude * math.sin(theta) * math.cos(phi) + x
-        zy = magnitude * math.sin(theta) * math.sin(phi) + y
-        zz = magnitude * math.cos(theta) + z
+        zx = magnitude * math.sin(theta) * math.cos(phi) + cx
+        zy = magnitude * math.sin(theta) * math.sin(phi) + cy
+        zz = magnitude * math.cos(theta) + cz
     # Non-escape is not proof of membership; zero is a rendering convention.
     return 0.0, max_iterations, False
 
@@ -42,6 +45,7 @@ def estimate(
     power: float = DEFAULT_POWER,
     max_iterations: int = DEFAULT_ITERATIONS,
     bailout: float = DEFAULT_BAILOUT,
+    julia: tuple[float, float, float] | None = None,
 ) -> tuple[float, int, bool]:
     """Return distance estimate, updates from c, and escape status.
 
@@ -56,7 +60,13 @@ def estimate(
         raise ValueError("Iterations must be an integer between 1 and 256")
     if not math.isfinite(bailout) or not 2.0 <= bailout <= 16.0:
         raise ValueError("Bailout must be between 2 and 16")
-    return _estimate(float(x), float(y), float(z), float(power), max_iterations, float(bailout))
+    if julia is not None and (
+        len(julia) != 3 or not all(math.isfinite(v) and abs(v) <= 2 for v in julia)
+    ):
+        raise ValueError("Julia coordinates must be finite and within +/-2")
+    return _estimate(
+        float(x), float(y), float(z), float(power), max_iterations, float(bailout), julia
+    )
 
 
 def distance_estimate(x: float, y: float, z: float, **kwargs) -> float:

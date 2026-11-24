@@ -23,8 +23,14 @@ def camera_path(camera, settings, mode, phase):
     iterations = settings.get("iterations", 20)
     bailout = settings.get("bailout", 4.0)
 
+    julia = (
+        tuple(settings.get(k, v) for k, v in (("cx", 0.35), ("cy", 0.2), ("cz", 0.1)))
+        if settings.get("fractal") == "Julia Bulb"
+        else None
+    )
+
     def clearance(point):
-        return estimate(*point, power, iterations, bailout)[0]
+        return estimate(*point, power, iterations, bailout, julia)[0]
 
     if clearance(origin) <= 0.002:
         raise ValueError("Camera must start outside the fractal")

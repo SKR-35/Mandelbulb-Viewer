@@ -87,6 +87,7 @@ class Viewer:
         preset.pack(fill="x", pady=(0, 8))
         preset.bind("<<ComboboxSelected>>", self.apply_preset)
         for name, default, options in (
+            ("fractal", "Mandelbulb", ("Mandelbulb", "Julia Bulb")),
             ("palette", DEFAULT_PALETTE, ORDER),
             ("color_mode", "angular", ("radial", "height", "angular", "orbit_trap")),
             ("quality", "Normal", ("Preview", "Normal", "High")),
@@ -118,6 +119,15 @@ class Viewer:
                 self.request()
 
             ttk.Scale(panel, from_=low, to=high, variable=var, command=changed).pack(fill="x")
+        julia_panel = ttk.Frame(toolbar)
+        julia_panel.pack(side="left", padx=12)
+        for name, default in (("cx", 0.35), ("cy", 0.2), ("cz", 0.1)):
+            ttk.Label(julia_panel, text=name.upper()).pack(side="left")
+            var = tk.DoubleVar(value=default)
+            self.values[name] = var
+            ttk.Scale(
+                julia_panel, from_=-1, to=1, variable=var, length=85, command=self.request
+            ).pack(side="left")
         ttk.Button(panel, text="Render", command=self.request).pack(fill="x", pady=8)
         ttk.Button(panel, text="Reset camera", command=self.reset).pack(fill="x")
         ttk.Label(panel, textvariable=self.status, wraplength=210).pack(pady=8)
