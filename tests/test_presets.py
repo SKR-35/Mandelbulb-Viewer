@@ -32,3 +32,9 @@ def test_trap_color_differs():
     a = render_image(width=20, height=20, color_mode="orbit_trap")
     b = render_image(width=20, height=20, color_mode="radial")
     assert np.any(a != b)
+
+
+def test_every_palette_has_exactly_one_preset():
+    from mandelbulb_viewer.palettes import ORDER
+
+    assert sorted(settings["palette"] for settings in PRESETS.values()) == sorted(ORDER)

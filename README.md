@@ -7,7 +7,7 @@ Interactive desktop visualization of the three-dimensional Mandelbulb fractal us
 - Perspective camera with orbit, pan and field-of-view zoom.
 - Adjustable fractal power and iteration count.
 - 18 color palettes with radial, height, angular and spherical orbit-trap mapping.
-- Four named fractal and shading presets.
+- 18 named fractal and shading presets, one for each palette.
 - Adjustable lighting, ambient occlusion, gamma and exposure.
 - Background rendering with progressive previews and optional 2×2 supersampling in High quality mode.
 
