@@ -6,7 +6,8 @@ Interactive desktop visualization of the three-dimensional Mandelbulb fractal us
 
 - Perspective camera with orbit, pan and field-of-view zoom.
 - Adjustable fractal power and iteration count.
-- 18 color palettes with radial, height and angular mapping.
+- 18 color palettes with radial, height, angular and spherical orbit-trap mapping.
+- Four named fractal and shading presets.
 - Adjustable lighting, ambient occlusion, gamma and exposure.
 - Background rendering with progressive previews and optional 2×2 supersampling in High quality mode.
 
@@ -37,4 +38,4 @@ uv run pytest
 
 ## License
 
-Apache-2.0.
+Apache-2.0. See [LICENSE](LICENSE).

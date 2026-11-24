@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 from mandelbulb_viewer.camera import Camera
 from mandelbulb_viewer.palettes import DEFAULT_PALETTE, ORDER
+from mandelbulb_viewer.presets import PRESETS, preset_settings
 from mandelbulb_viewer.progressive import plan_passes, render_pass
 
 
@@ -47,7 +48,7 @@ class Viewer:
     def __init__(self, root):
         self.root = root
         root.title("Mandelbulb Viewer")
-        root.geometry("1100x760")
+        root.geometry("1100x800")
         self.camera = Camera()
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.future = None
@@ -64,9 +65,16 @@ class Viewer:
         self.canvas.pack(side="right", fill="both", expand=True)
         self.status = tk.StringVar(value="Ready")
         self.values = {}
+        self.slider_labels = {}
+        self.preset = tk.StringVar(value="Select preset")
+        preset = ttk.Combobox(
+            panel, textvariable=self.preset, values=tuple(PRESETS), state="readonly"
+        )
+        preset.pack(fill="x", pady=(0, 8))
+        preset.bind("<<ComboboxSelected>>", self.apply_preset)
         for name, default, options in (
             ("palette", DEFAULT_PALETTE, ORDER),
-            ("color_mode", "angular", ("radial", "height", "angular")),
+            ("color_mode", "angular", ("radial", "height", "angular", "orbit_trap")),
             ("quality", "Normal", ("Preview", "Normal", "High")),
         ):
             ttk.Label(panel, text=name.replace("_", " ").title()).pack(anchor="w")
@@ -89,6 +97,7 @@ class Viewer:
             self.values[name] = var
             label = ttk.Label(panel, text=f"{name.replace('_', ' ').title()}: {default:.2f}")
             label.pack(anchor="w")
+            self.slider_labels[name] = label
 
             def changed(value, label=label, name=name):
                 label.configure(text=f"{name.replace('_', ' ').title()}: {float(value):.2f}")
@@ -106,6 +115,15 @@ class Viewer:
         self.canvas.bind("<Button-5>", lambda e: self.wheel(-1))
         self.canvas.bind("<Configure>", self.request)
         root.protocol("WM_DELETE_WINDOW", self.close)
+        self.request()
+
+    def apply_preset(self, _event=None):
+        for name, value in preset_settings(self.preset.get()).items():
+            self.values[name].set(value)
+            if name in self.slider_labels:
+                self.slider_labels[name].configure(
+                    text=f"{name.replace('_', ' ').title()}: {value:.2f}"
+                )
         self.request()
 
     def press(self, event):

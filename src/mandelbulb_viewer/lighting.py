@@ -41,6 +41,26 @@ def _occlusion(p, normal, epsilon, power, iterations, bailout):
     return max(0.25, 1.0 - 0.8 * deficit)
 
 
+@njit(cache=True)
+def _orbit_trap(p, power, iterations, bailout):
+    # Minimum distance of the orbit to the origin (a spherical trap).
+    x, y, z = p
+    zx, zy, zz = x, y, z
+    trap = math.sqrt(x * x + y * y + z * z)
+    for i in range(iterations + 1):
+        r = math.sqrt(zx * zx + zy * zy + zz * zz)
+        trap = min(trap, r)
+        if r > bailout or r == 0.0 or i == iterations:
+            break
+        theta = math.acos(max(-1.0, min(1.0, zz / r))) * power
+        phi = math.atan2(zy, zx) * power
+        magnitude = r**power
+        zx = magnitude * math.sin(theta) * math.cos(phi) + x
+        zy = magnitude * math.sin(theta) * math.sin(phi) + y
+        zz = magnitude * math.cos(theta) + z
+    return min(1.0, trap)
+
+
 @njit(cache=True, parallel=True)
 def _shade(
     depth,
@@ -86,6 +106,8 @@ def _shade(
                 field[y, x] = min(1.0, max(0.0, (p[2] + 1.2) / 2.4))
             elif mode == 2:
                 field[y, x] = (math.atan2(p[1], p[0]) + math.pi) / (2 * math.pi)
+            elif mode == 3:
+                field[y, x] = _orbit_trap(p, power, iterations, bailout)
             else:
                 field[y, x] = min(1.0, max(0.0, (np.sqrt(np.dot(p, p)) - 0.45) / 0.95))
     return field, illumination, highlights
@@ -117,7 +139,7 @@ def render_image(
     # Validate palette and gamma before expensive geometry work.
     colorize(np.zeros((1, 1)), palette, gamma)
     estimate(0.0, 0.0, 0.0, power, iterations, bailout)
-    modes = ("radial", "height", "angular")
+    modes = ("radial", "height", "angular", "orbit_trap")
     if color_mode not in modes:
         raise ValueError("Unknown color mode")
     for value, low, high in (
