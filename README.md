@@ -56,6 +56,25 @@ The application combines a lightweight Tkinter interface with Numba-accelerated 
   <sub>2048 × 2048 pixels · Click any image to explore the full-resolution render.</sub>
 </p>
 
+### Animated Demonstration — Julia Bulb Morph
+
+<p align="center">
+  <img src="docs/julia-bulb_geoz_p8_it24_orbit-trap_720x720_cx0.35_cy0.2_cz0.1_julia-bulb-morph_24fps_6s_ss2.gif"
+       width="480"
+       alt="Dynamic 3D Julia Bulb morphing animation">
+</p>
+
+<p align="center">
+  <b>Golden Coral — Dynamic Julia Bulb Morph</b><br>
+  <sub>720 × 720 · 24 FPS · 144 frames · 2× supersampling</sub>
+</p>
+
+The camera remains stationary while the Julia constant
+varies continuously over time, revealing the dynamic
+geometry of three-dimensional nonlinear iterations.
+Each frame is independently computed from the
+underlying mathematical model.
+
 ## Highlights
 
 - **Two fractal models:** classical Mandelbulb and a three-dimensional Julia variant with independently adjustable constants.
