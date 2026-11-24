@@ -42,7 +42,22 @@ def _occlusion(p, normal, epsilon, power, iterations, bailout):
 
 
 @njit(cache=True, parallel=True)
-def _shade(depth, hit, origin, forward, right, up, scale, power, iterations, bailout, epsilon):
+def _shade(
+    depth,
+    hit,
+    origin,
+    forward,
+    right,
+    up,
+    scale,
+    power,
+    iterations,
+    bailout,
+    epsilon,
+    mode,
+    ambient,
+    ao_strength,
+):
     height, width = hit.shape
     field = np.zeros((height, width))
     illumination = np.zeros_like(field)
@@ -63,10 +78,16 @@ def _shade(depth, hit, origin, forward, right, up, scale, power, iterations, bai
             diffuse = max(0.0, np.dot(normal, light))
             half = light - direction
             half /= np.sqrt(np.dot(half, half))
-            illumination[y, x] = (0.24 + 0.76 * diffuse) * ao
+            ao = 1.0 - ao_strength * (1.0 - ao)
+            illumination[y, x] = (ambient + (1.0 - ambient) * diffuse) * ao
             highlights[y, x] = 0.25 * max(0.0, np.dot(normal, half)) ** 32 * ao
             # World-space radius keeps surface colors stable during camera orbits.
-            field[y, x] = min(1.0, max(0.0, (np.sqrt(np.dot(p, p)) - 0.45) / 0.95))
+            if mode == 1:
+                field[y, x] = min(1.0, max(0.0, (p[2] + 1.2) / 2.4))
+            elif mode == 2:
+                field[y, x] = (math.atan2(p[1], p[0]) + math.pi) / (2 * math.pi)
+            else:
+                field[y, x] = min(1.0, max(0.0, (np.sqrt(np.dot(p, p)) - 0.45) / 0.95))
     return field, illumination, highlights
 
 
@@ -83,6 +104,12 @@ def render_image(
     far: float = 20.0,
     palette: str = DEFAULT_PALETTE,
     gamma: float = 1.0,
+    color_mode: str = "radial",
+    color_cycles: float = 1.0,
+    color_offset: float = 0.0,
+    ambient: float = 0.4,
+    ao_strength: float = 0.65,
+    exposure: float = 1.2,
 ) -> np.ndarray:
     """Render an RGB uint8 image; gamma controls palette mapping."""
     if camera is None:
@@ -90,6 +117,18 @@ def render_image(
     # Validate palette and gamma before expensive geometry work.
     colorize(np.zeros((1, 1)), palette, gamma)
     estimate(0.0, 0.0, 0.0, power, iterations, bailout)
+    modes = ("radial", "height", "angular")
+    if color_mode not in modes:
+        raise ValueError("Unknown color mode")
+    for value, low, high in (
+        (color_cycles, 0.1, 10),
+        (color_offset, 0, 1),
+        (ambient, 0, 1),
+        (ao_strength, 0, 1),
+        (exposure, 0.1, 3),
+    ):
+        if not math.isfinite(value) or not low <= value <= high:
+            raise ValueError("Invalid shading parameter")
     geometry = render_geometry(
         camera,
         width,
@@ -110,8 +149,14 @@ def render_image(
         iterations,
         bailout,
         epsilon,
+        modes.index(color_mode),
+        ambient,
+        ao_strength,
     )
+    if color_cycles != 1 or color_offset != 0:
+        field = (field * color_cycles + color_offset) % 1.0
     rgb = colorize(field, palette, gamma).astype(np.float64)
     rgb = rgb * illumination[..., None] + 255 * highlights[..., None]
+    rgb *= exposure
     rgb[~geometry.hit] = (8, 10, 18)
     return np.rint(np.clip(rgb, 0, 255)).astype(np.uint8)
