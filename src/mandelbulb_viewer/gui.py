@@ -73,6 +73,8 @@ class Viewer:
             width=7,
             values=("Auto", *map(str, range(1, config.NUMBA_NUM_THREADS + 1))),
         ).pack(side="left")
+        julia_panel = ttk.LabelFrame(root, text="Julia Parameters", padding=6)
+        julia_panel.pack(side="top", fill="x", padx=6, pady=(0, 4))
         panel = ttk.Frame(root, padding=12)
         panel.pack(side="left", fill="y")
         self.canvas = tk.Canvas(root, bg="#080a12", highlightthickness=0)
@@ -119,15 +121,38 @@ class Viewer:
                 self.request()
 
             ttk.Scale(panel, from_=low, to=high, variable=var, command=changed).pack(fill="x")
-        julia_panel = ttk.Frame(toolbar)
-        julia_panel.pack(side="left", padx=12)
-        for name, default in (("cx", 0.35), ("cy", 0.2), ("cz", 0.1)):
-            ttk.Label(julia_panel, text=name.upper()).pack(side="left")
+        for column, (name, default) in enumerate((("cx", 0.35), ("cy", 0.2), ("cz", 0.1))):
+            group = ttk.Frame(julia_panel)
+            group.grid(row=0, column=column, sticky="ew", padx=6)
+            julia_panel.columnconfigure(column, weight=1, uniform="julia")
+            ttk.Label(group, text=name.capitalize()).pack(side="left", padx=(0, 4))
             var = tk.DoubleVar(value=default)
             self.values[name] = var
-            ttk.Scale(
-                julia_panel, from_=-1, to=1, variable=var, length=85, command=self.request
-            ).pack(side="left")
+            display = tk.StringVar(value=f"{default:.3f}")
+            entry = ttk.Entry(group, textvariable=display, width=8)
+            entry.pack(side="right", padx=(4, 0))
+
+            def commit(_event=None, var=var, display=display):
+                try:
+                    value = float(display.get().replace(",", "."))
+                    if not math.isfinite(value) or not -1 <= value <= 1:
+                        raise ValueError("Julia parameter outside range")
+                except ValueError:
+                    display.set(f"{var.get():.3f}")
+                    return
+                var.set(value)
+                display.set(f"{value:.3f}")
+                self.request()
+
+            def sync(*_, var=var, display=display):
+                display.set(f"{var.get():.3f}")
+
+            var.trace_add("write", sync)
+            entry.bind("<Return>", commit)
+            entry.bind("<FocusOut>", commit)
+            ttk.Scale(group, from_=-1, to=1, variable=var, command=self.request).pack(
+                side="left", fill="x", expand=True
+            )
         ttk.Button(panel, text="Render", command=self.request).pack(fill="x", pady=8)
         ttk.Button(panel, text="Reset camera", command=self.reset).pack(fill="x")
         ttk.Label(panel, textvariable=self.status, wraplength=210).pack(pady=8)
