@@ -51,9 +51,6 @@ class Viewer:
         self.root = root
         root.title("Mandelbulb Viewer")
         root.geometry("1100x800")
-        menu = tk.Menu(root)
-        menu.add_command(label="Export…", command=lambda: open_export(self))
-        root.configure(menu=menu)
         self.camera = Camera()
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.future = None
