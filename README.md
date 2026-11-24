@@ -1,18 +1,40 @@
 # Mandelbulb Viewer
 
-A Python project for interactive 3D Mandelbulb visualization using distance estimation and ray marching.
+Interactive desktop visualization of the three-dimensional Mandelbulb fractal using CPU ray marching and distance estimation.
 
-**Status:** Phase 00 — project foundation. Rendering and GUI are not implemented yet.
+## Features
 
-## Development setup
+- Perspective camera with orbit, pan and field-of-view zoom.
+- Adjustable fractal power and iteration count.
+- 18 color palettes with radial, height and angular mapping.
+- Adjustable lighting, ambient occlusion, gamma and exposure.
+- Background rendering with progressive previews and optional 2×2 supersampling in High quality mode.
 
-Requires uv and Python 3.12. On Windows, verify Tkinter with `uv run python -m tkinter`.
+## Installation
 
-```powershell
+Requires Python 3.12, uv and Tkinter. From the repository root:
+
+```sh
 uv sync
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest -q
+uv run python -m mandelbulb_viewer
 ```
 
-The palette module contains the 17 inherited Arnold Tongue palettes and Geoz. Yikique is the default.
+## Controls
+
+Left-drag to orbit, right-drag to pan, and scroll to zoom. Use the side panel to adjust fractal and shading parameters. Preview quality renders at up to 240 pixels on the longest edge; Normal at up to 480; High at up to 900 with four subpixel samples per output pixel. Images are scaled to fit the canvas. Initial rendering may take longer due to Numba compilation.
+
+## Rendering method
+
+The renderer uses a spherical-coordinate power iteration and an approximate distance estimator. Surface normals are estimated by finite differences; lighting uses diffuse and Blinn–Phong specular terms with approximate ambient occlusion. Rendering runs on the CPU using Numba parallel kernels.
+
+## Development
+
+```sh
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+```
+
+## License
+
+Apache-2.0.

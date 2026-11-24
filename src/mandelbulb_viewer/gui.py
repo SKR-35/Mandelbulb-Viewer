@@ -4,14 +4,15 @@ import math
 import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from time import perf_counter
 from tkinter import ttk
 
 import numpy as np
 from PIL import Image, ImageTk
 
 from mandelbulb_viewer.camera import Camera
-from mandelbulb_viewer.lighting import render_image
 from mandelbulb_viewer.palettes import DEFAULT_PALETTE, ORDER
+from mandelbulb_viewer.progressive import plan_passes, render_pass
 
 
 def orbit(camera, dx, dy):
@@ -51,6 +52,8 @@ class Viewer:
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.future = None
         self.pending = False
+        self.generation = 0
+        self.final_timer = None
         self.closed = False
         self.timer = None
         self.photo = None
@@ -126,10 +129,14 @@ class Viewer:
         self.request()
 
     def request(self, *_):
+        self.generation += 1
         self.pending = True
+        if self.final_timer is not None:
+            self.root.after_cancel(self.final_timer)
+            self.final_timer = None
         if self.timer is not None:
             self.root.after_cancel(self.timer)
-        self.timer = self.root.after(180, self.start)
+        self.timer = self.root.after(90, self.start)
 
     def start(self):
         self.timer = None
@@ -137,27 +144,36 @@ class Viewer:
             return
         self.pending = False
         settings = {key: var.get() for key, var in self.values.items()}
-        limit = {"Preview": 240, "Normal": 480, "High": 900}[settings.pop("quality")]
+        quality = settings.pop("quality")
         settings["iterations"] = int(round(settings["iterations"]))
         w, h = max(1, self.canvas.winfo_width()), max(1, self.canvas.winfo_height())
-        scale = min(1.0, limit / max(w, h))
-        self.status.set("Rendering…")
-        self.future = self.pool.submit(
-            render_image, self.camera, max(1, int(w * scale)), max(1, int(h * scale)), **settings
-        )
-        self.root.after(60, self.poll)
+        passes = plan_passes(w, h, quality)
+        self.submit(self.generation, self.camera, settings, passes)
 
-    def poll(self):
+    def submit(self, generation, camera, settings, passes):
+        self.final_timer = None
+        if self.closed or generation != self.generation:
+            return
+        stage = passes[0]
+        self.status.set("Rendering preview…" if len(passes) > 1 else "Rendering final…")
+        self.started = perf_counter()
+        self.future = self.pool.submit(render_pass, camera, stage, settings)
+        self.root.after(60, lambda: self.poll(generation, camera, settings, passes))
+
+    def poll(self, generation, camera, settings, passes):
         if self.closed:
             return
         if not self.future.done():
-            self.root.after(60, self.poll)
+            self.root.after(60, lambda: self.poll(generation, camera, settings, passes))
             return
         try:
-            image = self.future.result()
-            if not self.pending:
-                picture = Image.fromarray(image)
-                picture.thumbnail((self.canvas.winfo_width(), self.canvas.winfo_height()))
+            picture = self.future.result()
+            if generation == self.generation:
+                w, h = picture.size
+                scale = min(self.canvas.winfo_width() / w, self.canvas.winfo_height() / h)
+                picture = picture.resize(
+                    (max(1, round(w * scale)), max(1, round(h * scale))), Image.Resampling.BILINEAR
+                )
                 self.photo = ImageTk.PhotoImage(picture)
                 self.canvas.delete("all")
                 self.canvas.create_image(
@@ -165,9 +181,16 @@ class Viewer:
                     self.canvas.winfo_height() // 2,
                     image=self.photo,
                 )
-                self.status.set(f"Ready | {image.shape[1]} × {image.shape[0]}")
+                label = "Preview" if len(passes) > 1 else "Ready"
+                self.status.set(f"{label} | {w} × {h} | {perf_counter() - self.started:.2f}s")
+                if len(passes) > 1:
+                    # Give input events a chance to invalidate expensive refinement.
+                    self.final_timer = self.root.after(
+                        350, lambda: self.submit(generation, camera, settings, passes[1:])
+                    )
         except Exception as exc:
-            self.status.set(f"Render error: {exc}")
+            if generation == self.generation:
+                self.status.set(f"Render error: {exc}")
         finally:
             self.future = None
         if self.pending and self.timer is None:
