@@ -14,9 +14,47 @@ The application combines a lightweight Tkinter interface with Numba-accelerated 
 
 ## Visualization Showcase
 
-![Golden Coral — Julia Bulb](docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx0.35_cy0.2_cz0.1_ss2.png)
+<p align="center">
+  Selected high-resolution Mandelbulb and Julia Bulb renders,
+  generated using 2× supersampling (4 samples per pixel).
+</p>
 
-*Golden Coral — Julia Bulb rendered with the Geoz palette, power 8, 24 iterations, C = (0.35, 0.20, 0.10) and 2 × 2 supersampling at 2048 × 2048 pixels.*
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <a href="docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx-0.5_cy0.3_cz0.2_ss2.png">
+        <img src="docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx-0.5_cy0.3_cz0.2_ss2.png" width="100%" alt="Golden Coral II">
+      </a>
+      <b>Golden Coral II</b><br>
+      <sub>Julia Bulb · Power 8</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx0.35_cy0.2_cz0.1_ss2.png">
+        <img src="docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx0.35_cy0.2_cz0.1_ss2.png" width="100%" alt="Golden Coral">
+      </a>
+      <b>Golden Coral</b><br>
+      <sub>Julia Bulb · Power 8</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/mandelbulb_jade_p6_it24_orbit-trap_2048x2048_ss2.png">
+        <img src="docs/mandelbulb_jade_p6_it24_orbit-trap_2048x2048_ss2.png" width="100%" alt="Jade Bloom">
+      </a>
+      <b>Jade Bloom</b><br>
+      <sub>Mandelbulb · Power 6</sub>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/mandelbulb_magma_p10_it24_height_2048x2048_ss2.png">
+        <img src="docs/mandelbulb_magma_p10_it24_height_2048x2048_ss2.png" width="100%" alt="Magma Cathedral">
+      </a>
+      <b>Magma Cathedral</b><br>
+      <sub>Mandelbulb · Power 10</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub>2048 × 2048 pixels · Click any image to explore the full-resolution render.</sub>
+</p>
 
 ## Highlights
 
