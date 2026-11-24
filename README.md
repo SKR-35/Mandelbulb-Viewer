@@ -43,3 +43,11 @@ uv run pytest
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+### Advanced camera animations
+
+Deep Zoom moves the camera toward the first surface along its viewing direction.
+Spiral Dive adds a lateral spiral. Fractal Flythrough is an experimental exterior
+approach with lateral steering; it does not guarantee traversal of arbitrary
+cavities. Aim the camera at the desired region before exporting. These modes
+are one-way paths, not seamless loops. Surface clearance is approximate.

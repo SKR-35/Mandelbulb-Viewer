@@ -6,6 +6,7 @@ from threading import Event
 from time import monotonic
 from tkinter import filedialog, messagebox, ttk
 
+from mandelbulb_viewer.camera_paths import CAMERA_MODES
 from mandelbulb_viewer.export import ExportCancelled, export_scene, suggested_filename
 from mandelbulb_viewer.progressive import RenderPass
 
@@ -18,7 +19,11 @@ def open_export(viewer):
     fields = {}
     for name, default, options in (
         ("Format", "PNG", ("PNG", "GIF", "MP4")),
-        ("Animation", "Camera Orbit", ("Camera Orbit", "Power Morph", "Palette Cycle", "Zoom")),
+        (
+            "Animation",
+            "Camera Orbit",
+            ("Camera Orbit", "Power Morph", "Palette Cycle", "Zoom", *CAMERA_MODES),
+        ),
         ("Width", "640", None),
         ("Height", "480", None),
         ("FPS", "12", None),

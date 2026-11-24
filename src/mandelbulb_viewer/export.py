@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from mandelbulb_viewer.camera_paths import CAMERA_MODES, camera_path
 from mandelbulb_viewer.progressive import render_pass
 
 
@@ -39,6 +40,8 @@ def suggested_filename(settings, stage, suffix, mode, fps, seconds):
 
 def frame_scene(camera, settings, mode, phase):
     """Return independent scene settings for a normalized loop phase."""
+    if mode in CAMERA_MODES:
+        return camera_path(camera, settings, mode, phase)
     settings = dict(settings)
     wave = (1 - math.cos(2 * math.pi * phase)) / 2
     if mode == "Camera Orbit":
@@ -105,7 +108,12 @@ def export_scene(
             cam, config = (
                 (camera, settings)
                 if suffix == ".png"
-                else frame_scene(camera, settings, mode, i / total)
+                else frame_scene(
+                    camera,
+                    settings,
+                    mode,
+                    i / max(1, total - 1) if mode in CAMERA_MODES else i / total,
+                )
             )
             picture = render_pass(cam, stage, config)
             if suffix == ".png":
