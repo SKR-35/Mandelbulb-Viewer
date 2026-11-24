@@ -2,6 +2,7 @@
 
 import math
 import os
+import re
 import tempfile
 from dataclasses import replace
 from pathlib import Path
@@ -13,6 +14,27 @@ from mandelbulb_viewer.progressive import render_pass
 
 class ExportCancelled(Exception):
     """Export was cancelled before publication."""
+
+
+def suggested_filename(settings, stage, suffix, mode, fps, seconds):
+    """Build a portable, editable filename from the scene and export settings."""
+
+    def slug(value):
+        return re.sub(r"[^a-z0-9-]+", "-", str(value).lower()).strip("-")
+
+    parts = [
+        "mandelbulb",
+        slug(settings.get("palette", "Yikique")),
+        f"p{settings.get('power', 8):.4g}",
+        f"it{settings.get('iterations', 20)}",
+        slug(settings.get("color_mode", "radial")),
+        f"{stage.width}x{stage.height}",
+    ]
+    suffix = suffix.lower().lstrip(".")
+    if suffix != "png":
+        parts.extend((slug(mode), f"{fps}fps", f"{seconds}s"))
+    parts.append(f"ss{stage.samples}")
+    return "_".join(parts) + "." + suffix
 
 
 def frame_scene(camera, settings, mode, phase):

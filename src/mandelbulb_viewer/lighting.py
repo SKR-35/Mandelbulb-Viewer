@@ -1,6 +1,7 @@
 """Surface shading for the distance-estimated Mandelbulb."""
 
 import math
+from functools import lru_cache
 
 import numpy as np
 from numba import njit, prange
@@ -113,6 +114,55 @@ def _shade(
     return field, illumination, highlights
 
 
+@lru_cache(maxsize=1)
+def _cached_geometry(camera, width, height, power, iterations, bailout, epsilon, max_steps, far):
+    return render_geometry(
+        camera,
+        width,
+        height,
+        power=power,
+        iterations=iterations,
+        bailout=bailout,
+        epsilon=epsilon,
+        max_steps=max_steps,
+        far=far,
+    )
+
+
+@lru_cache(maxsize=1)
+def _cached_shading(
+    camera,
+    width,
+    height,
+    power,
+    iterations,
+    bailout,
+    epsilon,
+    max_steps,
+    far,
+    mode,
+    ambient,
+    ao_strength,
+):
+    geometry = _cached_geometry(
+        camera, width, height, power, iterations, bailout, epsilon, max_steps, far
+    )
+    field, illumination, highlights = _shade(
+        geometry.depth,
+        geometry.hit,
+        *camera.frame(),
+        math.tan(math.radians(camera.fov) / 2),
+        power,
+        iterations,
+        bailout,
+        epsilon,
+        mode,
+        ambient,
+        ao_strength,
+    )
+    return geometry.hit, field, illumination, highlights
+
+
 def render_image(
     camera: Camera | None = None,
     width: int = 320,
@@ -151,26 +201,16 @@ def render_image(
     ):
         if not math.isfinite(value) or not low <= value <= high:
             raise ValueError("Invalid shading parameter")
-    geometry = render_geometry(
+    hit, field, illumination, highlights = _cached_shading(
         camera,
         width,
         height,
-        power=power,
-        iterations=iterations,
-        bailout=bailout,
-        epsilon=epsilon,
-        max_steps=max_steps,
-        far=far,
-    )
-    field, illumination, highlights = _shade(
-        geometry.depth,
-        geometry.hit,
-        *camera.frame(),
-        math.tan(math.radians(camera.fov) / 2),
         power,
         iterations,
         bailout,
         epsilon,
+        max_steps,
+        far,
         modes.index(color_mode),
         ambient,
         ao_strength,
@@ -180,5 +220,5 @@ def render_image(
     rgb = colorize(field, palette, gamma).astype(np.float64)
     rgb = rgb * illumination[..., None] + 255 * highlights[..., None]
     rgb *= exposure
-    rgb[~geometry.hit] = (8, 10, 18)
+    rgb[~hit] = (8, 10, 18)
     return np.rint(np.clip(rgb, 0, 255)).astype(np.uint8)

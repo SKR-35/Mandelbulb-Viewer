@@ -26,11 +26,11 @@ Left-drag to orbit, right-drag to pan, and scroll to zoom. Use the side panel to
 
 ## Export
 
-Use the Export menu to save PNG images or GIF/MP4 animations. Select dimensions, frame rate, duration and sampling independently of the canvas. Animation modes include camera orbit, power morph, palette cycling and zoom. MP4 requires even dimensions. Cancellation takes effect between frames.
+Use the Export toolbar button or menu to save PNG images or GIF/MP4 animations. Select dimensions, frame rate, duration and sampling independently of the canvas. Animation modes include camera orbit, power morph, palette cycling and zoom. MP4 requires even dimensions. Cancellation takes effect between frames. Suggested filenames include scene and export parameters.
 
 ## Rendering method
 
-The renderer uses a spherical-coordinate power iteration and an approximate distance estimator. Surface normals are estimated by finite differences; lighting uses diffuse and Blinn–Phong specular terms with approximate ambient occlusion. Rendering runs on the CPU using Numba parallel kernels.
+The renderer uses a spherical-coordinate power iteration and an approximate distance estimator. Surface normals are estimated by finite differences; lighting uses diffuse and Blinn–Phong specular terms with approximate ambient occlusion. Rendering runs on the CPU using Numba parallel kernels. The toolbar controls the worker thread count. The most recent geometry and shading fields are cached for compatible render requests, including palette-cycle animation frames.
 
 ## Development
 

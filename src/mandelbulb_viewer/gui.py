@@ -8,6 +8,7 @@ from time import perf_counter
 from tkinter import ttk
 
 import numpy as np
+from numba import config, set_num_threads
 from PIL import Image, ImageTk
 
 from mandelbulb_viewer.camera import Camera
@@ -63,6 +64,18 @@ class Viewer:
         self.timer = None
         self.photo = None
         self.last = (0, 0)
+        toolbar = ttk.Frame(root, padding=6)
+        toolbar.pack(side="top", fill="x")
+        ttk.Button(toolbar, text="Export…", command=lambda: open_export(self)).pack(side="right")
+        ttk.Label(toolbar, text="CPU Threads:").pack(side="left")
+        self.threads = tk.StringVar(value="Auto")
+        ttk.Combobox(
+            toolbar,
+            textvariable=self.threads,
+            state="readonly",
+            width=7,
+            values=("Auto", *map(str, range(1, config.NUMBA_NUM_THREADS + 1))),
+        ).pack(side="left")
         panel = ttk.Frame(root, padding=12)
         panel.pack(side="left", fill="y")
         self.canvas = tk.Canvas(root, bg="#080a12", highlightthickness=0)
@@ -120,6 +133,17 @@ class Viewer:
         self.canvas.bind("<Configure>", self.request)
         root.protocol("WM_DELETE_WINDOW", self.close)
         self.request()
+
+    def submit_work(self, function, *args):
+        selection = self.threads.get()
+        count = config.NUMBA_NUM_THREADS if selection == "Auto" else int(selection)
+
+        def work():
+            # Numba thread masks are local to the calling worker thread.
+            set_num_threads(count)
+            return function(*args)
+
+        return self.pool.submit(work)
 
     def apply_preset(self, _event=None):
         for name, value in preset_settings(self.preset.get()).items():
@@ -179,7 +203,7 @@ class Viewer:
         stage = passes[0]
         self.status.set("Rendering preview…" if len(passes) > 1 else "Rendering final…")
         self.started = perf_counter()
-        self.future = self.pool.submit(render_pass, camera, stage, settings)
+        self.future = self.submit_work(render_pass, camera, stage, settings)
         self.root.after(60, lambda: self.poll(generation, camera, settings, passes))
 
     def poll(self, generation, camera, settings, passes):

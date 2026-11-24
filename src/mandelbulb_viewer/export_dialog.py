@@ -6,7 +6,7 @@ from threading import Event
 from time import monotonic
 from tkinter import filedialog, messagebox, ttk
 
-from mandelbulb_viewer.export import ExportCancelled, export_scene
+from mandelbulb_viewer.export import ExportCancelled, export_scene, suggested_filename
 from mandelbulb_viewer.progressive import RenderPass
 
 
@@ -88,20 +88,25 @@ def open_export(viewer):
             messagebox.showerror("Export", str(exc), parent=dialog)
             return
         suffix = "." + fields["Format"].get().lower()
+        settings = {k: v.get() for k, v in viewer.values.items() if k != "quality"}
+        settings["iterations"] = int(round(settings["iterations"]))
+        stage = RenderPass(w, h, samples)
+        mode = fields["Animation"].get()
         path = filedialog.asksaveasfilename(
-            parent=dialog, defaultextension=suffix, filetypes=[(suffix.upper(), "*" + suffix)]
+            parent=dialog,
+            defaultextension=suffix,
+            filetypes=[(suffix.upper(), "*" + suffix)],
+            initialfile=suggested_filename(settings, stage, suffix, mode, fps, seconds),
         )
         if not path:
             return
-        settings = {k: v.get() for k, v in viewer.values.items() if k != "quality"}
-        settings["iterations"] = int(round(settings["iterations"]))
         cancel.clear()
         bar.configure(value=0)
         started[0] = monotonic()
         button.configure(state="disabled")
         stop.configure(text="Cancel")
         status.set("Waiting for render worker…")
-        future = viewer.pool.submit(
+        future = viewer.submit_work(
             export_scene,
             path,
             viewer.camera,

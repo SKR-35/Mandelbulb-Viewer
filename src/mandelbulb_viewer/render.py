@@ -76,8 +76,6 @@ def render_geometry(
     far: float = 20.0,
 ) -> Geometry:
     """Render depth, hit mask and step count. Misses have infinite depth."""
-    if camera is None:
-        camera = Camera()
     if any(type(v) is not int or not 1 <= v <= 4096 for v in (width, height)):
         raise ValueError("Dimensions must be integers between 1 and 4096")
     if type(max_steps) is not int or not 1 <= max_steps <= 4096:
@@ -87,6 +85,8 @@ def render_geometry(
     if not math.isfinite(far) or not 0 < far <= 1e5:
         raise ValueError("Far distance must be positive and at most 1e5")
     estimate(0.0, 0.0, 0.0, power, iterations, bailout)
+    if camera is None:
+        camera = Camera()
     frame = camera.frame()
     return Geometry(
         *_render(
