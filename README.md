@@ -1,77 +1,251 @@
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=blue)
+![GUI](https://img.shields.io/badge/GUI-Tkinter-blueviolet)
+![Computation](https://img.shields.io/badge/Computation-NumPy-013243?logo=numpy&logoColor=white)
+![Acceleration](https://img.shields.io/badge/Acceleration-Numba-00A3E0?logo=numba&logoColor=white)
+[![CI](https://img.shields.io/github/actions/workflow/status/SKR-35/Mandelbulb-Viewer/ci.yml?branch=master&label=CI&logo=githubactions&logoColor=white)](https://github.com/SKR-35/Mandelbulb-Viewer/actions/workflows/ci.yml)
+
 # Mandelbulb Viewer
 
-Interactive desktop visualization of the three-dimensional Mandelbulb fractal using CPU ray marching and distance estimation.
+**An interactive Python desktop explorer for three-dimensional Mandelbulb and Julia Bulb fractals, with CPU-accelerated ray marching, dynamic geometry and cinematic animation export.**
 
-## Features
+Mandelbulb Viewer turns nonlinear three-dimensional iterations into explorable mathematical landscapes. Orbit intricate surfaces, investigate fine geometric structures, experiment with Julia constants and create still images or animations directly from numerical calculations.
 
-- Perspective camera with orbit, pan and field-of-view zoom.
-- Adjustable fractal power and iteration count.
-- 18 color palettes with radial, height, angular and spherical orbit-trap mapping.
-- 18 named fractal and shading presets, one for each palette.
-- Adjustable lighting, ambient occlusion, gamma and exposure.
-- Background rendering with progressive previews and optional 2×2 supersampling in High quality mode.
+The application combines a lightweight Tkinter interface with Numba-accelerated rendering. It is designed for mathematical exploration, computational art and experimentation with nonlinear dynamical systems. Every visualization is computed from the fractal model rather than generated from static image assets.
+
+## Visualization Showcase
+
+![Golden Coral — Julia Bulb](docs/julia-bulb_geoz_p8_it24_orbit-trap_2048x2048_cx0.35_cy0.2_cz0.1_ss2.png)
+
+*Golden Coral — Julia Bulb rendered with the Geoz palette, power 8, 24 iterations, C = (0.35, 0.20, 0.10) and 2 × 2 supersampling at 2048 × 2048 pixels.*
+
+## Highlights
+
+- **Two fractal models:** classical Mandelbulb and a three-dimensional Julia variant with independently adjustable constants.
+- **Interactive camera:** orbit, pan and field-of-view zoom.
+- **Dynamic geometry:** continuous power morphing and periodic Julia-parameter animation.
+- **Advanced camera paths:** Deep Zoom, Spiral Dive and experimental Fractal Flythrough.
+- **18 palettes and 18 presets:** curated combinations of geometry, color mapping and shading.
+- **Four coloring modes:** radial, height, angular and spherical orbit-trap mapping.
+- **Surface shading:** diffuse and specular lighting, approximate ambient occlusion, gamma and exposure controls.
+- **Progressive rendering:** responsive background previews and optional 2 × 2 supersampling.
+- **CPU acceleration:** parallel Numba kernels, configurable thread count and compatible geometry/shading caches.
+- **Export:** PNG images, animated GIFs and MP4 videos with configurable dimensions, frame rate and duration.
+- **Batch gallery:** command-line generation of reproducible preset images and animations.
+- **Quality checks:** automated tests, Ruff and GitHub Actions CI configuration.
+
+## Mathematical model
+
+The Mandelbulb extends the idea of complex polynomial iteration into three-dimensional space using a spherical-coordinate power transformation. For a vector with spherical coordinates $(r,\theta,\phi)$, define
+
+$$
+P_p(\mathbf z)=r^p\begin{pmatrix}\sin(p\theta)\cos(p\phi)\\\sin(p\theta)\sin(p\phi)\\\cos(p\theta)\end{pmatrix}.
+$$
+
+The iteration is
+
+$$
+\mathbf z_{n+1}=P_p(\mathbf z_n)+\mathbf c.
+$$
+
+### Mandelbulb and Julia Bulb
+
+| Model | Initial state | Constant |
+| --- | --- | --- |
+| Mandelbulb | Origin (the implementation skips the trivial first update) | Spatial sample point |
+| Julia Bulb | Spatial sample point | Fixed vector $(c_x,c_y,c_z)$ |
+
+The Mandelbulb visualizes a parameter-space construction, while the Julia Bulb visualizes initial conditions for a fixed transformation. The latter is analogous to a complex Julia set, but uses a spherical power map rather than ordinary complex multiplication.
+
+Changing the power modifies the transformation itself. Changing the Julia constant modifies the dynamical system, making it possible to animate the geometry without moving the camera.
+
+### Distance estimation and ray marching
+
+For escaped trajectories, the renderer uses the approximate exterior distance estimate
+
+$$
+D\approx\frac{r\log r}{2d_r}.
+$$
+
+The scalar derivative estimate is updated using
+
+$$
+d_{r,n+1}=p r_n^{p-1}d_{r,n}+\delta,
+$$
+
+where $\delta=1$ for Mandelbulb and $\delta=0$ for Julia Bulb.
+
+Rays advance through the scene using distance estimates until they approach a surface or reach a termination condition. Surface normals are approximated by finite differences and lighting combines diffuse and Blinn–Phong specular terms with approximate ambient occlusion.
+
+These scalar estimates are rendering approximations, not certified distances or rigorous membership tests.
 
 ## Installation
 
-Requires Python 3.12, uv and Tkinter. From the repository root:
+### Requirements
 
-```sh
+- Python **3.12**
+- [uv](https://docs.astral.sh/uv/)
+- A desktop environment with Tkinter support
+
+```bash
+git clone https://github.com/SKR-35/Mandelbulb-Viewer.git
+cd Mandelbulb-Viewer
 uv sync
 uv run python -m mandelbulb_viewer
 ```
 
-## Controls
+The application uses NumPy, Numba, Pillow, Matplotlib, SciPy and ImageIO with FFmpeg support for video export. Tkinter is supplied by the Python installation. The first accelerated render may take longer while Numba compiles its kernels.
 
-Left-drag to orbit, right-drag to pan, and scroll to zoom. Use the side panel to adjust fractal and shading parameters. Preview quality renders at up to 240 pixels on the longest edge; Normal at up to 480; High at up to 900 with four subpixel samples per output pixel. Images are scaled to fit the canvas. Initial rendering may take longer due to Numba compilation.
+## Using the viewer
 
-## Export
+1. Select **Mandelbulb** or **Julia Bulb**.
+2. Choose a preset or adjust the power and iteration count.
+3. For Julia Bulb, adjust **Cx**, **Cy** and **Cz** using the sliders or numeric inputs.
+4. Left-drag to orbit, right-drag to pan and scroll to zoom.
+5. Customize the palette, coloring mode and lighting.
+6. Select a rendering quality and CPU thread count.
+7. Use **Export** to save an image or animation.
 
-Use the Export toolbar button or menu to save PNG images or GIF/MP4 animations. Select dimensions, frame rate, duration and sampling independently of the canvas. Animation modes include camera orbit, power morph, palette cycling and zoom. MP4 requires even dimensions. Cancellation takes effect between frames. Suggested filenames include scene and export parameters.
+| Quality | Canvas render budget | Sampling |
+| --- | --- | --- |
+| Preview | Up to 240 pixels on the longest edge | 1 sample per pixel |
+| Normal | Up to 480 pixels on the longest edge | 1 sample per pixel |
+| High | Up to 900 pixels on the longest edge | 4 samples per pixel |
 
-## Rendering method
+Export resolution is independent of the interactive canvas. Higher iteration counts, larger images and supersampling increase computation time.
 
-The renderer uses a spherical-coordinate power iteration and an approximate distance estimator. Surface normals are estimated by finite differences; lighting uses diffuse and Blinn–Phong specular terms with approximate ambient occlusion. Rendering runs on the CPU using Numba parallel kernels. The toolbar controls the worker thread count. The most recent geometry and shading fields are cached for compatible render requests, including palette-cycle animation frames.
+## Preset gallery
 
-## Development
+Presets combine mathematical and visual parameters; they are more than palette selections.
 
-```sh
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest
-```
+| Preset | Palette | Power | Coloring |
+| --- | --- | ---: | --- |
+| Classic Rainbow | Yikique | 8 | Angular |
+| Golden Coral | Geoz | 8 | Orbit trap |
+| Pearl Sculpture | Pearl | 8 | Height |
+| Jade Bloom | Jade | 6 | Orbit trap |
+| Plasma Nebula | plasma | 9 | Height |
+| Viridian Crown | viridis | 7 | Angular |
+| Magma Cathedral | magma | 10 | Height |
+| Inferno Forge | inferno | 8 | Radial |
+| Turbo Spectrum | turbo | 9 | Angular |
+| Cividis Relic | cividis | 6 | Height |
+| Twilight Dream | twilight | 8 | Angular |
+| Sunset Blossom | SoftSunset | 5 | Height |
+| Terrestrial Sky | EarthAndSky | 7 | Height |
+| Ocean Reef | Seashore | 9 | Orbit trap |
+| Emerald Canopy | Forest | 6 | Radial |
+| Fire and Ice | HotAndCold | 8 | Angular |
+| Pastel Porcelain | Pastel | 5 | Angular |
+| Obsidian Relief | Grayscale | 10 | Height |
 
-## License
+## Image and animation export
 
-Apache-2.0. See [LICENSE](LICENSE).
+The export dialog supports PNG, GIF and MP4. Suggested filenames encode selected scene and export parameters. For exact reproducibility, also retain camera and shading settings.
 
-### Advanced camera animations
+| Animation | Behavior |
+| --- | --- |
+| Camera Orbit | Rotates the camera around the fractal |
+| Power Morph | Changes the fractal power over time |
+| Palette Cycle | Animates color mapping without changing geometry |
+| Zoom | Moves through a forward-and-back zoom cycle |
+| Deep Zoom | Approaches the first surface along the viewing direction |
+| Spiral Dive | Adds lateral spiral motion to the surface approach |
+| Fractal Flythrough | Experimental exterior approach with lateral steering |
+| Julia Bulb Morph | Changes Julia constants with a fixed camera |
+| Julia Bulb Orbit | Combines Julia morphing with camera rotation |
 
-Deep Zoom moves the camera toward the first surface along its viewing direction.
-Spiral Dive adds a lateral spiral. Fractal Flythrough is an experimental exterior
-approach with lateral steering; it does not guarantee traversal of arbitrary
-cavities. Aim the camera at the desired region before exporting. These modes
-are one-way paths, not seamless loops. Surface clearance is approximate.
+Advanced camera paths use approximate surface-clearance checks and adaptive rendering tolerances. They are one-way sequences, not seamless loops. Flythrough does not guarantee navigation through arbitrary cavities.
 
-### Julia Bulb
-
-Select **Julia Bulb** in the fractal selector and adjust Cx, Cy and Cz in the toolbar. The fixed three-dimensional constant replaces the spatially varying Mandelbulb constant. Export supports Julia Bulb Morph (fixed camera) and Julia Bulb Orbit (moving camera). Both follow periodic parameter paths. Distance estimation is approximate; some parameter combinations may produce disconnected or poorly resolved surfaces.
+Julia animations follow periodic paths through the three-dimensional constant space. Each frame is recalculated from its own mathematical parameters, rather than interpolating previously rendered images.
 
 ## Batch gallery generation
 
-Generate all 18 preset images without opening the GUI:
+Inspect available options:
 
-```powershell
-uv run python -m mandelbulb_viewer.gallery --output gallery --width 1200 --height 1200
+```bash
+uv run python -m mandelbulb_viewer.gallery --help
 ```
 
-Use `--dry-run` to preview filenames, `--preset "Classic Rainbow"` to select a
-scene (repeatable), `--samples 2` for supersampling, and `--threads 4` to set
-Numba threads. Existing files are skipped unless `--overwrite` is supplied.
+Preview the output filenames without rendering:
 
-```powershell
-uv run python -m mandelbulb_viewer.gallery --fractal julia --cx 0.35 --cy 0.2 --cz 0.1 --output gallery/julia
-uv run python -m mandelbulb_viewer.gallery --preset "Classic Rainbow" --format mp4 --animation "Julia Bulb Morph" --width 480 --height 480 --output gallery/videos
+```bash
+uv run python -m mandelbulb_viewer.gallery --dry-run
 ```
 
-Animation exports require the same dependencies as GUI exports. Interrupting a
-batch preserves previously completed files; rerun to skip existing outputs.
+Generate the complete preset collection:
+
+```bash
+uv run python -m mandelbulb_viewer.gallery --width 1200 --height 1200 --output gallery
+```
+
+Generate the Golden Coral showcase image:
+
+```bash
+uv run python -m mandelbulb_viewer.gallery --fractal julia --cx 0.35 --cy 0.20 --cz 0.10 --preset "Golden Coral" --width 2048 --height 2048 --samples 2 --threads 4 --output gallery/showcase
+```
+
+Generate a Julia morph animation:
+
+```bash
+uv run python -m mandelbulb_viewer.gallery --fractal julia --preset "Golden Coral" --format gif --animation "Julia Bulb Morph" --width 480 --height 480 --fps 12 --seconds 6 --samples 2 --output gallery/videos
+```
+
+Existing files are skipped unless `--overwrite` is supplied. Repeat `--preset` to select multiple scenes. Completed outputs can be retained when interrupting a batch.
+
+### Export limits and performance
+
+- Maximum width and height are 4096 with `--samples 1` or 2048 with `--samples 2`.
+- Supersampling doubles each internal dimension and quadruples the primary ray count.
+- MP4 dimensions must be even.
+- GIF generation is subject to a memory-budget check; use MP4 for larger sequences.
+- Start with small previews before committing to high-resolution animations. Rendering cost depends on geometry, ray steps, iterations, sampling and hardware.
+
+## Architecture
+
+The application is organized under `src/mandelbulb_viewer/`.
+
+| Module | Responsibility |
+| --- | --- |
+| `__main__.py` | Application entry point |
+| `gui.py` | Tkinter interface and interactive controls |
+| `core.py` | Fractal iteration and distance estimation |
+| `camera.py` | Perspective camera and navigation |
+| `camera_paths.py` | Advanced camera trajectories |
+| `render.py` | Parallel ray marching and rendering |
+| `lighting.py` | Surface shading and lighting |
+| `progressive.py` | Progressive rendering and sampling configuration |
+| `palettes.py` | Color palettes |
+| `presets.py` | Named scene configurations |
+| `export.py` | Image and animation generation |
+| `export_dialog.py` | Export interface |
+| `gallery.py` | Command-line batch generation |
+
+Numerical kernels are separated from the desktop interface to support automated testing and headless gallery generation. Compatible geometry and shading results can be reused, including during palette-cycle animations.
+
+## Development and quality checks
+
+```bash
+uv sync --group dev
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -q
+```
+
+For coverage in PowerShell, disable JIT compilation temporarily:
+
+```powershell
+$env:NUMBA_DISABLE_JIT = "1"
+uv run pytest --cov=mandelbulb_viewer --cov-report=term-missing
+Remove-Item Env:NUMBA_DISABLE_JIT
+```
+
+The GitHub Actions workflow runs dependency installation, Ruff checks and pytest on pushes and pull requests. JIT-disabled coverage complements rather than replaces tests of accelerated execution.
+
+## Numerical interpretation and limitations
+
+- Finite iteration counts cannot prove fractal membership.
+- Distance estimates, surface normals and ambient occlusion are numerical approximations.
+- Deep zoom is limited by floating-point precision, ray-step budgets and surface tolerances.
+- Julia constants can produce disconnected, empty-looking or poorly resolved geometry.
+- The spherical power map is not ordinary complex or quaternion exponentiation.
+- Rendering is CPU-based; high-resolution animations may require substantial computation.
