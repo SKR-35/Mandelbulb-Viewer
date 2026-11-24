@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image, ImageTk
 
 from mandelbulb_viewer.camera import Camera
+from mandelbulb_viewer.export_dialog import open_export
 from mandelbulb_viewer.palettes import DEFAULT_PALETTE, ORDER
 from mandelbulb_viewer.presets import PRESETS, preset_settings
 from mandelbulb_viewer.progressive import plan_passes, render_pass
@@ -49,6 +50,9 @@ class Viewer:
         self.root = root
         root.title("Mandelbulb Viewer")
         root.geometry("1100x800")
+        menu = tk.Menu(root)
+        menu.add_command(label="Export…", command=lambda: open_export(self))
+        root.configure(menu=menu)
         self.camera = Camera()
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.future = None

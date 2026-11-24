@@ -10,6 +10,8 @@ dependencies = [
     "pillow",
     "matplotlib",
     "scipy>=1.18.1",
+    "imageio>=2.38.2",
+    "imageio-ffmpeg>=0.8.1",
 ]
 
 [build-system]
